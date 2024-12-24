@@ -12,6 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 import xgboost as xgb
 from joblib import dump, load
+from imblearn.over_sampling import SMOTE
 
 def remove_outlier(col):
     sorted(col)
@@ -157,8 +158,7 @@ def churn_train(df):
         
         print("Before OverSampling, counts of label '1': {}".format(sum(y == 1))) 
         print("Before OverSampling, counts of label '0': {}".format(sum(y == 0)))
-
-        from imblearn.over_sampling import SMOTE 
+ 
         sm = SMOTE(random_state=33)
         X_res, y_res = sm.fit_resample(X, y.ravel())
 

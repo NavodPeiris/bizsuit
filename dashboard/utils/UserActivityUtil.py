@@ -1,5 +1,5 @@
 import random
-import DemoGraphicDataUtil
+from DemographicDataUtil import DemoGraphicDataUtil
 from stream import UserActivity
 
 class UserActivityUtil:
