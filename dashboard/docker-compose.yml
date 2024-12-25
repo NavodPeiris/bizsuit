@@ -5,7 +5,7 @@ services:
     image: mysql:8.0
     container_name: mysql
     ports:
-      - "3307:3306"
+      - "3306:3306"
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -21,8 +21,8 @@ services:
       - "3004:8083"
       - "8086:8086"
     volumes:
-      - "C:/navod/Academic/sem7/bizsuit/dashboard:/var/lib/influxdb"
-      - "C:/navod/Academic/sem7/bizsuit/dashboard:/var/lib/grafana"
+      - "D:/Academic/SEM6/Data_Management_project/dashboard/spark-streaming-development:/var/lib/influxdb"
+      - "D:/Academic/SEM6/Data_Management_project/dashboard/spark-streaming-development:/var/lib/grafana"
 
 #  hbase:
 #    image: harisekhon/hbase-dev
@@ -119,7 +119,7 @@ services:
       CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components,/usr/share/confluent-hub-components/lenses"
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
     volumes:
-      - "C:/navod/Academic/sem7/bizsuit/dashboard/config/kafka-influx:/usr/share/confluent-hub-components"
+      - "D:/Academic/SEM6/Data_Management_project/dashboard/spark-streaming-development/config/kafka-influx:/usr/share/confluent-hub-components"
 
 
   control-center:
@@ -214,3 +214,6 @@ services:
       KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:29092'
       KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
       KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
+
+
+
