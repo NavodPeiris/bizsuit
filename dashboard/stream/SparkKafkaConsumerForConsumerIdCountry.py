@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, expr
 from pyspark.sql.streaming import Trigger
+from pyspark.sql.types import MapType, StringType, IntegerType, StructType
 import json
 import os
 
@@ -31,20 +32,22 @@ def main():
             .option("group.id", "user_activity_grp") \
             .option("schema.registry.url", "http://localhost:8081") \
             .load()
+        
+        # Define schemas
+        user_activity_schema = StructType() \
+            .add("id", IntegerType()) \
+            .add("campaignid", IntegerType()) \
+            .add("orderid", IntegerType()) \
+            .add("total_amount", IntegerType()) \
+            .add("units", IntegerType()) \
+            .add("tags", MapType(StringType(), StringType()))
 
-        # Load Avro schema
-        with open("./src/main/resources/userActivity.avsc", "r") as schema_file:
-            json_format_schema = schema_file.read()
-
-        # Deserialize Kafka messages using Avro schema
-        from_avro_config = {
-            "schema": json.loads(json_format_schema),
-            "schema.registry.url": "http://localhost:8081"
-        }
-
-        df2 = input_stream.selectExpr(
-            "from_avro(value, '{schema}') as activity".format(schema=json_format_schema)
-        )
+        # Deserialize Kafka messages using the PySpark schema
+        # Assuming Kafka value is JSON encoded
+        df2 = input_stream.selectExpr("CAST(value AS STRING) as json_value") \
+            .select(
+                expr(f"from_json(json_string, '{user_activity_schema.json()}')").alias("activity")
+            )
 
         # Load demographic data from MySQL
         demographic_data = spark.read.format("jdbc") \
