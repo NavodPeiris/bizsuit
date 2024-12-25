@@ -32,14 +32,10 @@ def main():
             .option("schema.registry.url", "http://localhost:8081") \
             .load()
 
-        # Define schemas
-        user_activity_schema = StructType() \
-            .add("id", IntegerType()) \
-            .add("campaignid", IntegerType()) \
-            .add("orderid", IntegerType()) \
-            .add("total_amount", IntegerType()) \
-            .add("units", IntegerType()) \
-            .add("tags", MapType(StringType(), StringType()))
+        # Load Avro schema
+        schema_path = "consumer_activity.avsc"  # Ensure schema is saved here
+        with open(schema_path, "r") as schema_file:
+            user_activity_schema = json.load(schema_file)
 
         user_activity_demographic_schema = StructType() \
             .add("id", IntegerType()) \
@@ -54,7 +50,7 @@ def main():
         user_activity_stream_des = user_activity_stream.selectExpr(
             "CAST(value AS STRING) as json_string"
         ).select(
-            expr(f"from_json(json_string, '{user_activity_schema.json()}')").alias("activity")
+            expr(f"from_json(json_string, '{user_activity_schema}')").alias("activity")
         )
 
         # Load demographic data from MySQL
