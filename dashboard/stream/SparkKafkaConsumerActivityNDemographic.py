@@ -2,13 +2,23 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, lit, struct, expr
 from pyspark.sql.streaming import StreamingQueryException
 from pyspark.sql.types import MapType, StringType, IntegerType, StructType
+import os
+
+os.environ["PYSPARK_PYTHON"] = "C:\\navod\\Academic\\sem7\\bizsuit\\env\\python.exe"
+os.environ["PYSPARK_DRIVER_PYTHON"] = "C:\\navod\\Academic\\sem7\\bizsuit\\env\\python.exe"
 
 def main():
     try:
+        relative_connector_path = "../mysql-connector-java-8.0.20.jar"
+        abs_connector_path = os.path.abspath(relative_connector_path)
+
         # Initialize Spark session
         spark = SparkSession.builder \
-            .master("local") \
+            .master("local[*]") \
             .appName("realtime spark kafka consumer") \
+            .config("spark.jars", abs_connector_path) \
+            .config("spark.executor.memory", "4g") \
+            .config("spark.driver.memory", "4g") \
             .getOrCreate()
 
         spark.sparkContext.setLogLevel("ERROR")
@@ -49,6 +59,7 @@ def main():
 
         # Load demographic data from MySQL
         demographic_data = spark.read.format("jdbc") \
+            .option("driver", "com.mysql.cj.jdbc.Driver") \
             .option("url", "jdbc:mysql://localhost:3307") \
             .option("dbtable", "users.userdemographics") \
             .option("user", "root") \

@@ -1,6 +1,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType
 import random
+import os
+
+os.environ["PYSPARK_PYTHON"] = "C:\\navod\\Academic\\sem7\\bizsuit\\env\\python.exe"
+os.environ["PYSPARK_DRIVER_PYTHON"] = "C:\\navod\\Academic\\sem7\\bizsuit\\env\\python.exe"
 
 class UserDemoGraphicData:
     def __init__(self, user_id, age, gender, state, country):
@@ -25,9 +29,15 @@ def generate_user_data():
         users.append(user)
     return users
 
+relative_connector_path = "../mysql-connector-java-8.0.20.jar"
+abs_connector_path = os.path.abspath(relative_connector_path)
+
 spark = SparkSession.builder \
     .appName("Batch User Demographic Data") \
-    .master("local") \
+    .master("local[*]") \
+    .config("spark.jars", abs_connector_path) \
+    .config("spark.executor.memory", "4g") \
+    .config("spark.driver.memory", "4g") \
     .getOrCreate()
 
 users = generate_user_data()
@@ -40,9 +50,10 @@ schema = StructType([
 ])
 user_df = spark.createDataFrame(users, schema)
 
-user_df.write \
+user_df.limit(1000).write \
     .format("jdbc") \
-    .option("url", "jdbc:mysql://localhost:3307") \
+    .option("driver", "com.mysql.cj.jdbc.Driver") \
+    .option("url", "jdbc:mysql://localhost:3307/users") \
     .option("dbtable", "users.userdemographics") \
     .option("user", "root") \
     .option("password", "example") \

@@ -21,8 +21,8 @@ services:
       - "3004:8083"
       - "8086:8086"
     volumes:
-      - "D:/Academic/SEM6/Data_Management_project/dashboard/spark-streaming-development:/var/lib/influxdb"
-      - "D:/Academic/SEM6/Data_Management_project/dashboard/spark-streaming-development:/var/lib/grafana"
+      - "C:/navod/Academic/sem7/bizsuit/dashboard:/var/lib/influxdb"
+      - "C:/navod/Academic/sem7/bizsuit/dashboard:/var/lib/grafana"
 
 #  hbase:
 #    image: harisekhon/hbase-dev
@@ -119,7 +119,7 @@ services:
       CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components,/usr/share/confluent-hub-components/lenses"
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
     volumes:
-      - "D:/Academic/SEM6/Data_Management_project/dashboard/spark-streaming-development/config/kafka-influx:/usr/share/confluent-hub-components"
+      - "C:/navod/Academic/sem7/bizsuit/dashboard/config/kafka-influx:/usr/share/confluent-hub-components"
 
 
   control-center:
