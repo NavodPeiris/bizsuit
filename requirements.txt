@@ -20,3 +20,4 @@ faiss-gpu
 xgboost
 openpyxl
 imblearn
+xlrd
