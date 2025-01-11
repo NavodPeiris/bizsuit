@@ -90,7 +90,29 @@ st.set_page_config(
     page_title="BizSuit",
     initial_sidebar_state="expanded",
     page_icon="bizsuite_logo_no_background.ico", 
+    layout="wide",  # Use wide layout
 )
+
+# Inject custom CSS for layout adjustments
+st.markdown("""
+    <style>
+        /* Increase padding around the main container */
+        .main {
+            padding: 2rem 2rem; /* Adjusted padding values */
+        }
+
+        /* Adjust the page width */
+        section.main > div {
+            max-width: 95%;
+            padding: 2rem; /* Adjusted padding values */
+        }
+
+        /* Increase padding for block container */
+        .block-container {
+            padding: 2rem 1rem; /* Adjusted padding values */
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # Inject custom CSS to hide the Streamlit state
 hide_streamlit_style = """
@@ -105,7 +127,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 st.markdown('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">', unsafe_allow_html=True)
 
 # Create a sidebar for navigation
-page = st.sidebar.selectbox("Select Page", ["Home", "Models", "Train", "About"])
+page = st.sidebar.selectbox("Select Page", ["Home", "Models", "Train", "Dashboards"])
 
 # Page content based on selection
 if page == "Home":
@@ -116,9 +138,9 @@ if page == "Home":
             <h3>Welcome to Bizsuite!</h3>
             <h4>Start Training Models and Gain Valuable Insights</h4>
         </div>
-        <div style="text-align: left;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%;">
             <h5>Services We Offer</h5>
-            <ul>
+            <ul style="list-style: none;">
                 <li>Churn Prediction</li>
                 <li>Recommendation Generation</li>
                 <li>Working Capital Optimization</li>
@@ -306,7 +328,12 @@ elif page == "Train":
     if st.button(key="recommendation-train", label="Train Model"):
         recommender_train_dialog()
 
+elif page == "Dashboards":
+    # URL of the Grafana dashboard or panel (make sure it's publicly accessible or authenticated)
+    grafana_url = "http://influx_grafana:3003"
 
-elif page == "About":
-    st.title("About")
-    st.write("This is the About page for BizSuit.")
+    # Embed Grafana view in the Streamlit app
+    st.markdown(f"""
+        <iframe src="{grafana_url}" width="100%" height="1080px"></iframe>
+    """, unsafe_allow_html=True)
+
