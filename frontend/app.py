@@ -181,6 +181,7 @@ elif page == "Models":
             if st.button("Submit"):
                 if product_id is not None:
                     recommendations = recommender_generation_fn(product_id)
+                    recommendations = recommendations.astype(str)
                     if len(recommendations) == 0:
                         st.write("Something Went Wrong") 
                     else:

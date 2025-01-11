@@ -1,18 +1,10 @@
 import pandas as pd
 import numpy as np
-import time
 import duckdb
 import networkx as nx
-from pecanpy import pecanpy
+
 from gensim.models import Word2Vec
-
-from tqdm import tqdm
-from joblib import load, dump
-from umap import UMAP
-import plotly.express as px
-from joblib import Parallel, delayed
-import faiss
-
+from node2vec import Node2Vec
 
 def train_recommender(df):
     try:
@@ -71,7 +63,7 @@ def train_recommender(df):
                 WHEN product_id < next_viewed_product_id THEN product_id
                 ELSE next_viewed_product_id
             END AS pid_2,
-            COUNT(*) AS occurence_ct
+            COUNT(*) AS occurrence_ct
         FROM product_views_graph
         WHERE next_viewed_product_id<>-1
         AND product_id IS NOT NULL
@@ -105,35 +97,19 @@ def train_recommender(df):
         graph.to_csv(edg_graph_path, sep='\t', index=False, header=False)
         print("Edg Graph Saved")
 
-        # graph random walk generation
-        g = pecanpy.SparseOTF(p=1, q=0.5, workers=-1, verbose=True, extend=True)
+        edge_list = [[x[0], x[1], x[2]] for x in graph[['pid_1', 'pid_1', 'occurrence_ct']].to_numpy()]
 
-        g.read_edg(edg_graph_path, weighted=WEIGHTED, directed=DIRECTED)
-        walks = g.simulate_walks(num_walks=NUM_WALK, walk_length=WALK_LEN)
+        G = nx.Graph()
+        G.add_weighted_edges_from(edge_list)
 
-        model = Word2Vec(walks,  # previously generated walks
-                        hs=1,  # tells the model to use hierarchical softmax
-                        sg = 1,  # tells the model to use skip-gram
-                        vector_size=128,  # size of the embedding
-                        window=5,
-                        min_count=1,
-                        workers=4,
-                        seed=42)
+        # Initialize Node2Vec with the graph
+        node2vec = Node2Vec(G, dimensions=64, walk_length=WALK_LEN, num_walks=NUM_WALK, p=2, q=1, workers=1)
 
-        model.save('./recommender/Model/node2vec_graph_embedding_'+GRAPH_FILE_NAME.split('.')[0]+'.model')
+        # Train the Node2Vec model
+        model = node2vec.fit(window=10, min_count=1, batch_words=4)
 
-        pid_set = set(graph['pid_1'].unique()).union(graph['pid_2'].unique())
-        payload = []
-        for pid in tqdm(pid_set):
-            try:
-                payload.append({'pid': pid, 'embedding_vector': model.wv[str(pid)]})
-            except:
-                print(pid, "Not Exist")
-                pass
-
-        # created embeddings for pids
-        embedding_df = pd.DataFrame(payload)
-        embedding_df.to_parquet('./recommender/Data/Embedding_Data/node2vec_embedding_df_'+GRAPH_FILE_NAME.split('.')[0]+'.parquet', index=False)
+        # Save the model
+        model.save('./recommender/Model/graph_embeddings.model')
 
         return "Successfully Trained Model"
 
@@ -144,49 +120,20 @@ def train_recommender(df):
 
 def generate_recommendations(product_id):
 
-    GRAPH_FILE_NAME = 'undirected_weighted_product_views_graph.parquet'
+    # Load the saved Node2Vec model
+    model = Word2Vec.load('./recommender/Model/graph_embeddings.model')
 
-    # vector search with FAISS
-    df_node2vec = pd.read_parquet('./recommender/Data/Embedding_Data/node2vec_embedding_df_{}.parquet'.format(GRAPH_FILE_NAME.split('.')[0]))
-    df_node2vec.columns = ['product_id', 'embedding_vector']
+    df = pd.read_parquet("./recommender/Data/optimised_raw_data.parquet")
 
-    df_full = pd.read_parquet('./recommender/Data/optimised_raw_data.parquet').drop_duplicates(subset=['product_id'])
-    df_full = df_full[['product_id', 'category_code']]
+    similar_products = []
+    # Find and print the most similar tokens
+    for similar_product in model.wv.most_similar(product_id)[:5]:
+        prod_id = similar_product[0]
+        # Get the `category_code` of the `prod_id`
+        category_code = df.loc[df['product_id'] == int(prod_id), 'category_code'].values
+        similar_products.append([prod_id,category_code[0]])
+        print(similar_product)
 
-    df_node2vec = df_node2vec.merge(df_full, how='left', on='product_id')
+    recommendations = pd.DataFrame(similar_products, columns=("Product Id", "Category Code"))
 
-    xb = np.array(df_node2vec.embedding_vector.tolist())
-    
-    # make faiss available
-    index = faiss.IndexFlatL2(128)   # build the index
-    print(index.is_trained)
-    index.add(xb)                  # add vectors to the index
-    print(index.ntotal)
-
-    k = 10                          # we want to see 10 nearest neighbors
-    D, I = index.search(xb, k)
-
-    # Get the index corresponding to the product_id
-    product_index = df_node2vec[df_node2vec['product_id'].astype(str) == product_id].index
-
-    # If you need the index as an integer (assuming the product exists):
-    if not product_index.empty:
-        product_index = product_index[0]
-    else:
-        print("Product ID not found.")
-        return []
-        
-    print(f"product index for product_id {product_id} is {product_index}")
-
-    # similar product reccomendation for index of product_id
-    similar_products = df_node2vec[df_node2vec.index.isin(I[product_index])]
-
-    # Drop the 'embedding_vector' column
-    similar_products = similar_products.drop(columns=['embedding_vector'])
-
-    # Reset the index (or remove it) to avoid carrying over the old index
-    similar_products = similar_products.reset_index(drop=True)
-
-    print(similar_products)
-
-    return similar_products
+    return recommendations
