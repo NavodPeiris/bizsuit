@@ -140,12 +140,11 @@ if page == "Home":
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%;">
             <h5>Services We Offer</h5>
-            <ul style="list-style: none;">
-                <li>Churn Prediction</li>
-                <li>Recommendation Generation</li>
-                <li>Working Capital Optimization</li>
-                <li>Realtime Customer Analytics Dashboard</li>
-            </ul>
+            <br>
+            <h6>● Churn Prediction</h6>
+            <h6>● Recommendation Generation</h6>
+            <h6>● Working Capital Optimization</h6>
+            <h6>● Realtime Customer Analytics Dashboard</h6>
         </div>
         """,
         unsafe_allow_html=True
@@ -171,6 +170,8 @@ elif page == "Models":
 
         if st.button(key="churns-pred", label="Use Model"):
             churn_pred_dialog()
+    else:
+        st.write("Model not available. Please train the model first.")
 
 
     st.subheader("Working Capital Optimization Model", divider="gray")
@@ -190,34 +191,37 @@ elif page == "Models":
 
         if st.button(key="wco-pred", label="Use Model"):
             wco_pred_dialog()
+    else:
+        st.write("Model not available. Please train the model first.")
 
 
-    st.subheader("Recommendation Model", divider="gray")
-    # churn model
-    if(os.path.exists(f"./churn/RF_model.joblib")):
-        @st.dialog("Upload The Input Data")
-        def recommendation_dialog():
-            # File uploader for Home page
-            product_id = st.text_input(key="recommendation-input", label="Insert Product Id")
+    st.subheader("Recommendation Model API", divider="gray")
+    if(os.path.exists(f"./recommender/Model/graph_embeddings.model")):
+        # API URL with copy button
+        api_url = "http://127.0.0.1:8000/get_recommendation/{product_id}"
+        st.code(api_url, language="plaintext")
 
-            if st.button("Submit"):
-                if product_id is not None:
-                    recommendations = recommender_generation_fn(product_id)
-                    recommendations = recommendations.astype(str)
-                    if len(recommendations) == 0:
-                        st.write("Something Went Wrong") 
-                    else:
-                        st.write("Recommendations:") 
-                        st.dataframe(recommendations)
-
-        if st.button(key="recommendation-pred", label="Use Model"):
-            recommendation_dialog()
+        # Response format example
+        st.write("### Example Response:")
+        response_example = """
+        {
+            "prod_id": "28717037",
+            "category_code": "apparel.shoes.keds"
+        }
+        """
+        st.code(response_example, language="json")
+    else:
+        st.write("Model not available. Please train the model first.")
 
 
 elif page == "Train":
     st.title("Train")
 
     st.subheader("Churn Prediction Model", divider="gray")
+    churn_df = pd.read_excel("./churn/E Commerce Dataset Test.xlsx")
+    st.text("Sample Data:")
+    st.dataframe(churn_df.head())
+
     @st.dialog("Upload The Input Data")
     def churn_train_dialog():
         # File uploader for Home page
@@ -233,6 +237,15 @@ elif page == "Train":
 
 
     st.subheader("Working Capital Optimization Model", divider="gray")
+    wco_payables_df = pd.read_excel("./wco/data/payables_data.xls")
+    wco_receivables_df = pd.read_excel("./wco/data/receivables_data.xls")
+
+    st.text("Sample Receivables Data:")
+    st.dataframe(wco_receivables_df.head())
+    st.text("Sample Payables Data:")
+    st.dataframe(wco_payables_df.head())
+    
+
     @st.dialog("Upload The Input Data")
     def wco_train_dialog():
         # File uploader for Home page
@@ -249,6 +262,10 @@ elif page == "Train":
 
 
     st.subheader("Recommendation Model", divider="gray")
+    recommender_df = pd.read_csv("./recommender/raw_data.csv")
+    st.text("Sample Data:")
+    st.dataframe(recommender_df.head())
+
     @st.dialog("Upload The Input Data")
     def recommender_train_dialog():
         # File uploader for Home page
@@ -330,7 +347,7 @@ elif page == "Train":
 
 elif page == "Dashboards":
     # URL of the Grafana dashboard or panel (make sure it's publicly accessible or authenticated)
-    grafana_url = "http://influx_grafana:3003"
+    grafana_url = "http://localhost:3003"
 
     # Embed Grafana view in the Streamlit app
     st.markdown(f"""

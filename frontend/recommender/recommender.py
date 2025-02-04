@@ -119,21 +119,23 @@ def train_recommender(df):
     
 
 def generate_recommendations(product_id):
+    prod_id = None
+    category_code = None
+    try:
+        # Load the saved Node2Vec model
+        model = Word2Vec.load('./Model/graph_embeddings.model')
 
-    # Load the saved Node2Vec model
-    model = Word2Vec.load('./recommender/Model/graph_embeddings.model')
+        df = pd.read_parquet("./Data/optimised_raw_data.parquet")
 
-    df = pd.read_parquet("./recommender/Data/optimised_raw_data.parquet")
+        # Find and print the most similar tokens
+        for similar_product in model.wv.most_similar(product_id)[:1]:
+            prod_id = similar_product[0]
+            # Get the `category_code` of the `prod_id`
+            category_code = df.loc[df['product_id'] == int(prod_id), 'category_code'].values
+            category_code = category_code[0]
+            print("prod_id: ", prod_id)
+            print("category_code: ", category_code)
+    except Exception as err:
+        print(f"Error : ${err}")
 
-    similar_products = []
-    # Find and print the most similar tokens
-    for similar_product in model.wv.most_similar(product_id)[:5]:
-        prod_id = similar_product[0]
-        # Get the `category_code` of the `prod_id`
-        category_code = df.loc[df['product_id'] == int(prod_id), 'category_code'].values
-        similar_products.append([prod_id,category_code[0]])
-        print(similar_product)
-
-    recommendations = pd.DataFrame(similar_products, columns=("Product Id", "Category Code"))
-
-    return recommendations
+    return prod_id, category_code
