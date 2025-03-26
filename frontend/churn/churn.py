@@ -192,11 +192,6 @@ def churn_train(df):
         print("Train accuracy: ", train_acc_RF)
         print("test accuracy: ", test_acc_RF)
 
-        if train_acc_RF > test_acc_RF:
-            print("overfiting")
-        else:
-            print("not overfitting")
-
         # saving best model
         dump(RF_model, 'churn/RF_model.joblib')
 

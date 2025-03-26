@@ -228,9 +228,10 @@ elif page == "Train":
         file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "xls", "csv"])
 
         if st.button("Submit"):
-            if file is not None:
-                message = churn_train_fn(file)
-                st.write("Model Train Status: ", message) 
+            with st.spinner("Training in progress..."):
+                if file is not None:
+                    message = churn_train_fn(file)
+                    st.write("Model Train Status: ", message) 
 
     if st.button(key="churns-train", label="Train Model"):
         churn_train_dialog()
@@ -253,9 +254,10 @@ elif page == "Train":
         ap_file = st.file_uploader("Upload Excel or CSV file for Account Payables", type=["xlsx", "xls", "csv"])
 
         if st.button("Submit"):
-            if ar_file is not None and ap_file is not None:
-                message = wco_train_fn(ar_file, ap_file)
-                st.write("Model Train Status: ", message) 
+            with st.spinner("Training in progress..."):
+                if ar_file is not None and ap_file is not None:
+                    message = wco_train_fn(ar_file, ap_file)
+                    st.write("Model Train Status: ", message) 
 
     if st.button(key="wco-train", label="Train Model"):
         wco_train_dialog()
@@ -272,75 +274,76 @@ elif page == "Train":
         file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "xls", "csv"])
 
         if st.button("Submit"):
-            if file is not None:
-                message = recommender_train_fn(file)
-                st.write("Model Train Status: ", message) 
-                
-                GRAPH_FILE_NAME = 'undirected_weighted_product_views_graph.parquet'
-                
-                # Load data
-                df_full = pd.read_parquet('./recommender/Data/optimised_raw_data.parquet')
-                df_node2vec = pd.read_parquet('./recommender/Data/Embedding_Data/node2vec_embedding_df_{}.parquet'.format(GRAPH_FILE_NAME.split('.')[0]))
+            with st.spinner("Training in progress..."):
+                if file is not None:
+                    message = recommender_train_fn(file)
+                    st.write("Model Train Status: ", message) 
+                    
+                    GRAPH_FILE_NAME = 'undirected_weighted_product_views_graph.parquet'
+                    
+                    # Load data
+                    df_full = pd.read_parquet('./recommender/Data/optimised_raw_data.parquet')
+                    df_node2vec = pd.read_parquet('./recommender/Data/Embedding_Data/node2vec_embedding_df_{}.parquet'.format(GRAPH_FILE_NAME.split('.')[0]))
 
-                # Preprocess
-                df_full = df_full[['product_id', 'category_code']]
-                df_full.drop_duplicates(subset=['product_id'], inplace=True)
-                df_full.columns = ['pid', 'category_code']
-                df_node2vec = df_node2vec.merge(df_full, on=['pid'], how='left')
+                    # Preprocess
+                    df_full = df_full[['product_id', 'category_code']]
+                    df_full.drop_duplicates(subset=['product_id'], inplace=True)
+                    df_full.columns = ['pid', 'category_code']
+                    df_node2vec = df_node2vec.merge(df_full, on=['pid'], how='left')
 
-                # Function to split category levels
-                def level_split(category):
-                    result = [None] * 3
-                    if not category or type(category) != str or category == '':
-                        return result
-                    try:
-                        d = category.split('.')
-                        result[:0] = d
-                    except:
-                        print("Error", category)
-                        pass
-                    return result[:3]
+                    # Function to split category levels
+                    def level_split(category):
+                        result = [None] * 3
+                        if not category or type(category) != str or category == '':
+                            return result
+                        try:
+                            d = category.split('.')
+                            result[:0] = d
+                        except:
+                            print("Error", category)
+                            pass
+                        return result[:3]
 
-                # Apply the level splitting function in parallel
-                result_level = Parallel(n_jobs=-1, verbose=0)(delayed(level_split)(x) for x in tqdm(df_node2vec.category_code.values))
-                category_split_df = pd.DataFrame(result_level, columns=['L1', 'L2', 'L3'])
+                    # Apply the level splitting function in parallel
+                    result_level = Parallel(n_jobs=-1, verbose=0)(delayed(level_split)(x) for x in tqdm(df_node2vec.category_code.values))
+                    category_split_df = pd.DataFrame(result_level, columns=['L1', 'L2', 'L3'])
 
-                # Add category levels to DataFrame
-                df_node2vec[['L1', 'L2', 'L3']] = category_split_df[['L1', 'L2', 'L3']]
+                    # Add category levels to DataFrame
+                    df_node2vec[['L1', 'L2', 'L3']] = category_split_df[['L1', 'L2', 'L3']]
 
-                # Create embedding matrix
-                embedding = np.stack(df_node2vec[~df_node2vec.L1.isna()].embedding_vector.values.tolist())
+                    # Create embedding matrix
+                    embedding = np.stack(df_node2vec[~df_node2vec.L1.isna()].embedding_vector.values.tolist())
 
-                # UMAP projection
-                umap_2d = UMAP(n_components=2, init='random', random_state=0, n_jobs=-1, verbose=True, metric='cosine', low_memory=False)
-                umap_3d = UMAP(n_components=3, init='random', random_state=0, n_jobs=-1, verbose=True, metric='cosine', low_memory=False)
+                    # UMAP projection
+                    umap_2d = UMAP(n_components=2, init='random', random_state=0, n_jobs=-1, verbose=True, metric='cosine', low_memory=False)
+                    umap_3d = UMAP(n_components=3, init='random', random_state=0, n_jobs=-1, verbose=True, metric='cosine', low_memory=False)
 
-                proj_2d = umap_2d.fit_transform(embedding)
-                proj_3d = umap_3d.fit_transform(embedding)
+                    proj_2d = umap_2d.fit_transform(embedding)
+                    proj_3d = umap_3d.fit_transform(embedding)
 
-                # 2D Plot
-                fig_2d = px.scatter(
-                    proj_2d[:30000], x=0, y=1,
-                    color=df_node2vec[~df_node2vec.L1.isna()].head(30000).L1, labels={'color': 'L1'}
-                )
+                    # 2D Plot
+                    fig_2d = px.scatter(
+                        proj_2d[:30000], x=0, y=1,
+                        color=df_node2vec[~df_node2vec.L1.isna()].head(30000).L1, labels={'color': 'L1'}
+                    )
 
-                # 3D Plot
-                fig_3d = px.scatter_3d(
-                    proj_3d[:30000], x=0, y=1, z=2,
-                    color=df_node2vec[~df_node2vec.L1.isna()].head(30000).L1, labels={'color': 'L1'}
-                )
-                fig_3d.update_traces(marker_size=5)
+                    # 3D Plot
+                    fig_3d = px.scatter_3d(
+                        proj_3d[:30000], x=0, y=1, z=2,
+                        color=df_node2vec[~df_node2vec.L1.isna()].head(30000).L1, labels={'color': 'L1'}
+                    )
+                    fig_3d.update_traces(marker_size=5)
 
-                # Display in Streamlit
-                st.title('UMAP Product Embedding Visualization')
+                    # Display in Streamlit
+                    st.title('UMAP Product Embedding Visualization')
 
-                # Show 2D UMAP
-                st.subheader('2D UMAP Visualization')
-                st.plotly_chart(fig_2d)
+                    # Show 2D UMAP
+                    st.subheader('2D UMAP Visualization')
+                    st.plotly_chart(fig_2d)
 
-                # Show 3D UMAP
-                st.subheader('3D UMAP Visualization')
-                st.plotly_chart(fig_3d)
+                    # Show 3D UMAP
+                    st.subheader('3D UMAP Visualization')
+                    st.plotly_chart(fig_3d)
 
     if st.button(key="recommendation-train", label="Train Model"):
         recommender_train_dialog()
